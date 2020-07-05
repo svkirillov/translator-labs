@@ -41,8 +41,8 @@ func main() {
 
 	gr.Print()
 
-	lrParser := lrparser.NewLRParser(gr, "a+b")
-	if err := lrParser.StartParse(); err != nil {
+	lrParser := lrparser.NewLRParser(*gr, "a+b")
+	if err := lrParser.Parse(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

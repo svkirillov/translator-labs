@@ -52,14 +52,14 @@ func (lrp *LRParser) pushL2Stack(l2Token l2StackNode) {
 
 	for i, s := range l2Token.token {
 		newL2Stack[i].token = string(s)
-		newL2Stack[i].tokenType = lrp.grammar.IsNTerm(string(s))
+		newL2Stack[i].tokenType = lrp.grammar.TokenType(string(s))
 	}
 
 	newL2Stack = append(newL2Stack, lrp.l2Stack...)
 	lrp.l2Stack = newL2Stack
 }
 
-func NewLRParser(gr *grammar.Grammar, in string) LRParser {
+func NewLRParser(gr grammar.Grammar, in string) LRParser {
 	var l2Stack []l2StackNode
 	for _, nt := range gr.NTokens {
 		if nt.NTSymbol == gr.Root {
@@ -80,7 +80,7 @@ func NewLRParser(gr *grammar.Grammar, in string) LRParser {
 	table.SetHeader([]string{"State", "L1", "L2", "Input"})
 
 	return LRParser{
-		grammar:    gr,
+		grammar:    &gr,
 		input:      in,
 		l1Stack:    nil,
 		l2Stack:    l2Stack,
@@ -107,7 +107,7 @@ func (lrp *LRParser) expandTree() {
 	ruleRSymbol := lrp.grammar.Rules[numRule].RSymbol
 	l2token := l2StackNode{
 		token:     ruleRSymbol,
-		tokenType: lrp.grammar.IsNTerm(ruleRSymbol),
+		tokenType: lrp.grammar.TokenType(ruleRSymbol),
 	}
 
 	lrp.l2Stack = lrp.l2Stack[1:]
@@ -211,7 +211,7 @@ func (lrp *LRParser) updateTable() {
 	var l1Stack string
 	for i := range lrp.l1Stack {
 		var index string
-		if lrp.grammar.IsNTerm(lrp.l1Stack[i].token) == grammar.NTerm {
+		if lrp.grammar.TokenType(lrp.l1Stack[i].token) == grammar.NTerm {
 			index = getIndex(lrp.l1Stack[i].altNum)
 		} else {
 			index = ""
@@ -272,7 +272,7 @@ func getIndex(num int) string {
 	return index
 }
 
-func (lrp *LRParser) StartParse() error {
+func (lrp *LRParser) Parse() error {
 	if len(lrp.input) == 0 {
 		return fmt.Errorf("input srtring is empty")
 	}

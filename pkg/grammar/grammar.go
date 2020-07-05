@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"github.com/olekukonko/tablewriter"
+
+	"github.com/svkirillov/translator-labs/pkg/helpers"
 )
 
 // Type of token
@@ -53,42 +55,51 @@ func New(gs GrammarSettings) (*Grammar, error) {
 
 	// set rules
 	for i := range gs.Rules {
+		ls := gs.Rules[i].LSymbol
+		rs := gs.Rules[i].RSymbol
+
+		if ls == rs {
+			return nil, fmt.Errorf("wrong rule: '%s -> %s'", ls, rs)
+		}
+
 		newGrammar.Rules = append(
 			newGrammar.Rules,
 			Rule{
-				LSymbol: gs.Rules[i].LSymbol,
-				RSymbol: gs.Rules[i].RSymbol,
+				LSymbol: ls,
+				RSymbol: rs,
 			},
 		)
 	}
 
 	// set terminal symbols
-	for i := range gs.TSymbols {
+	ts := helpers.Unique(gs.TSymbols)
+	for i := range ts {
 		newGrammar.TTokens = append(
 			newGrammar.TTokens,
-			TToken{TSymbol: gs.TSymbols[i]},
+			TToken{TSymbol: ts[i]},
 		)
 	}
 
 	// set non terminal symbols
-	for i := range gs.NTSymbols {
+	nts := helpers.Unique(gs.NTSymbols)
+	for i := range nts {
 		var alt []int
-		nts := gs.NTSymbols[i]
+		ntsym := nts[i]
 
 		for j, r := range newGrammar.Rules {
-			if r.LSymbol == nts {
+			if r.LSymbol == ntsym {
 				alt = append(alt, j)
 			}
 		}
 
 		if len(alt) == 0 {
-			return nil, fmt.Errorf("this token is not in the rules: %s", nts)
+			return nil, fmt.Errorf("this token is not in the rules: %s", ntsym)
 		}
 
 		newGrammar.NTokens = append(
 			newGrammar.NTokens,
 			NToken{
-				NTSymbol: nts,
+				NTSymbol: ntsym,
 				Alt:      alt,
 				AltCount: len(alt),
 			},
@@ -98,8 +109,8 @@ func New(gs GrammarSettings) (*Grammar, error) {
 	return &newGrammar, nil
 }
 
-func (g *Grammar) FindNToken(token string) int {
-	for i, nt := range g.NTokens {
+func (gr *Grammar) FindNToken(token string) int {
+	for i, nt := range gr.NTokens {
 		if nt.NTSymbol == token {
 			return i
 		}
@@ -108,15 +119,15 @@ func (g *Grammar) FindNToken(token string) int {
 	return -1
 }
 
-func (g *Grammar) IsNTerm(symbol string) int {
-	if g.FindNToken(symbol) < 0 {
+func (gr *Grammar) TokenType(symbol string) int {
+	if gr.FindNToken(symbol) < 0 {
 		return Term
 	}
 
 	return NTerm
 }
 
-func (g *Grammar) Print() {
+func (gr *Grammar) Print() {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
@@ -125,7 +136,7 @@ func (g *Grammar) Print() {
 	table.SetHeader([]string{"#", "Rule"})
 
 	data := make([][]string, 0)
-	for i, r := range g.Rules {
+	for i, r := range gr.Rules {
 		data = append(
 			data,
 			[]string{
@@ -140,10 +151,10 @@ func (g *Grammar) Print() {
 	fmt.Println("\033[1mRules:\033[0m")
 	table.Render()
 
-	fmt.Printf("\033[1mStart symbol:\033[0m %s\n", g.Root)
+	fmt.Printf("\033[1mStart symbol:\033[0m %s\n", gr.Root)
 
 	fmt.Printf("\033[1mTerminal symbols:\033[0m")
-	for _, tt := range g.TTokens {
+	for _, tt := range gr.TTokens {
 		fmt.Printf(" %s", tt.TSymbol)
 	}
 	fmt.Println()
@@ -156,7 +167,7 @@ func (g *Grammar) Print() {
 	table.SetHeader([]string{"Symbol", "Qty of alts", "Alternatives"})
 
 	data = make([][]string, 0)
-	for _, nt := range g.NTokens {
+	for _, nt := range gr.NTokens {
 		data = append(
 			data,
 			[]string{
